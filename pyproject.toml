@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "translation-app"
+version = "0.1.0"
+description = "Desktop app for translating Thai PDF files to English DOCX with layout fidelity."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "translation_app contributors" }]
+dependencies = [
+  "pymupdf",
+  "pdfplumber",
+  "python-docx",
+  "pyside6",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ruff",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "src/ir",
+  "src/extract",
+  "src/translate",
+  "src/export",
+  "src/ui",
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
