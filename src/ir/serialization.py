@@ -23,6 +23,8 @@ def document_to_dict(document: Document) -> dict[str, Any]:
         "pages": [
             {
                 "page_number": page.page_number,
+                "width_pt": page.width_pt,
+                "height_pt": page.height_pt,
                 "blocks": [_block_to_dict(block) for block in page.blocks],
             }
             for page in document.pages
@@ -74,6 +76,8 @@ def document_from_dict(data: dict[str, Any]) -> Document:
         pages=[
             Page(
                 page_number=page_data["page_number"],
+                width_pt=page_data.get("width_pt"),
+                height_pt=page_data.get("height_pt"),
                 blocks=[_block_from_dict(block_data) for block_data in page_data.get("blocks", [])],
             )
             for page_data in data.get("pages", [])

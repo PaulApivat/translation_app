@@ -6,10 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from docx import Document as WordDocument
+from docx.enum.section import WD_ORIENT, WD_SECTION_START
 from docx.enum.text import WD_BREAK
 from docx.shared import Pt
 
-from ir import Document, ParagraphBlock, Run, TableBlock
+from ir import Document, Page, ParagraphBlock, Run, TableBlock
 
 
 @dataclass(slots=True, frozen=True)
@@ -45,13 +46,18 @@ class DocxExporter:
 
     def export(self, document: Document, output_path: str | Path) -> None:
         word_doc = WordDocument()
+        if document.pages:
+            self._apply_page_layout(word_doc.sections[0], document.pages[0])
         for page_idx, page in enumerate(document.pages):
+            if self._include_page_breaks and page_idx > 0:
+                section = word_doc.add_section(WD_SECTION_START.NEW_PAGE)
+                self._apply_page_layout(section, page)
             for block in page.blocks:
                 if isinstance(block, ParagraphBlock):
                     self._write_paragraph(word_doc, block.runs)
                 elif isinstance(block, TableBlock):
                     self._write_table(word_doc, block)
-            if self._include_page_breaks and page_idx < len(document.pages) - 1:
+            if not self._include_page_breaks and page_idx < len(document.pages) - 1:
                 breaker = word_doc.add_paragraph()
                 breaker.add_run().add_break(WD_BREAK.PAGE)
         word_doc.save(str(output_path))
@@ -67,6 +73,7 @@ class DocxExporter:
             return
         max_cols = max(len(row) for row in rows)
         table = word_doc.add_table(rows=len(rows), cols=max_cols)
+        table.style = "Table Grid"
         for r_idx, row in enumerate(rows):
             for c_idx in range(max_cols):
                 cell = table.cell(r_idx, c_idx)
@@ -92,6 +99,18 @@ class DocxExporter:
         word_run.font.name = self._map_font_name(ir_run.font_name)
         if ir_run.size_pt is not None:
             word_run.font.size = Pt(ir_run.size_pt)
+
+    def _apply_page_layout(self, section, page: Page) -> None:
+        width = page.width_pt
+        height = page.height_pt
+        if width is None or height is None:
+            return
+        section.page_width = Pt(width)
+        section.page_height = Pt(height)
+        if width > height:
+            section.orientation = WD_ORIENT.LANDSCAPE
+        else:
+            section.orientation = WD_ORIENT.PORTRAIT
 
 
 def export_docx(

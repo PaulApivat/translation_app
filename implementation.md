@@ -17,7 +17,8 @@ Legend: `TODO` = not started, `IN_PROGRESS` = actively building, `DONE` = comple
 - `DONE` `build-extractors` - Implement PyMuPDF text/style extraction, column ordering, and pdfplumber table extraction.
 - `DONE` `translation-layer` - Implement provider adapter, chunking, batching/retries, and merge-by-ID.
 - `DONE` `docx-export` - Build DOCX writer for paragraphs/runs/tables with font mapping fallbacks.
-- `TODO` `desktop-ui` - Implement PySide6 UI with background worker, progress, logs, and settings.
+- `DONE` `docx-to-pdf-postprocess` - Add optional DOCX to PDF conversion step in the UI pipeline with clear dependency checks and error handling.
+- `DONE` `desktop-ui` - Implement PySide6 UI with background worker, progress, logs, and settings.
 - `TODO` `tests-fixtures` - Add fixture PDFs and regression tests for ordering, tables, and DOCX structure.
 - `TODO` `package-release` - Package macOS app and finalize README with limitations and setup.
 - `TODO` `v2-followup` - Add EN to TH language selector and Thai font defaults without refactoring core pipeline.
@@ -141,6 +142,12 @@ flowchart LR
   - output DOCX picker
   - v1 fixed language direction (TH to EN)
   - translate button, progress bar, and log panel
+- Add optional output toggle for DOCX to PDF post-processing:
+  - `DOCX only` (default)
+  - `DOCX + PDF` (runs DOCX export first, then conversion)
+- Add dependency preflight checks and UX messaging for converter availability:
+  - `docx2pdf` path (requires Microsoft Word on macOS)
+  - optional future fallback path (LibreOffice headless)
 - Run pipeline in `QThread` worker to keep UI responsive.
 - Add cancellation and clear error reporting.
 - Add settings dialog for API credentials (env var minimum; keyring optional).
@@ -152,11 +159,23 @@ flowchart LR
   - install/run/package instructions
   - API config
   - known limitations (scanned PDFs and OCR out of v1 scope)
+- Validate packaged conversion behavior for both output modes:
+  - DOCX only succeeds without converter installed
+  - DOCX + PDF succeeds when converter dependency is present
+  - DOCX + PDF fails gracefully with actionable error when converter dependency is missing
+- Document PDF conversion prerequisites and limitations:
+  - Word requirement for `docx2pdf` on macOS
+  - expected formatting caveats in final PDF rendering
 
 ### Phase 7: v1.1 hardening backlog
 - Add per-page manual column override UI for misdetected layouts.
 - Improve heuristics for uneven columns.
 - Warn when tables likely span pages and may be split.
+
+### Phase 7.1: Export fidelity hardening
+- Preserve source page orientation (portrait/landscape) in DOCX sections.
+- Improve table fidelity with explicit grid/border styling in generated tables.
+- Add DOCX XML regression checks for orientation tags and table-border/table-style tags.
 
 ### Phase 8: v2 enablement (EN to TH)
 - Add language-pair selector and shared direction parameter.
@@ -170,6 +189,7 @@ flowchart LR
 - Tables become real Word tables for supported patterns.
 - Run-level style fidelity is preserved where extractable.
 - UI remains responsive and provides progress + error visibility.
+- Optional DOCX to PDF post-process can be enabled in UI and reports clear success/failure states.
 
 ## Operating Rules During Development
 - Prefer interfaces and dependency injection over hard-coded concrete classes.

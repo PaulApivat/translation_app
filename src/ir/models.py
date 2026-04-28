@@ -44,6 +44,8 @@ Block = ParagraphBlock | TableBlock
 @dataclass(slots=True)
 class Page:
     page_number: int
+    width_pt: float | None = None
+    height_pt: float | None = None
     blocks: list[Block] = field(default_factory=list)
 
 

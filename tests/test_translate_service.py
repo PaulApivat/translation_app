@@ -96,6 +96,33 @@ def test_service_retries_rate_limit_and_partial_failures() -> None:
     assert provider.calls >= 3
 
 
+class _CancelAfterFirstCallProvider:
+    def translate_batch(self, request: TranslationRequest) -> list[str | None]:
+        return [f"EN:{txt}" for txt in request.texts]
+
+
+def test_service_honors_cancellation_between_batches() -> None:
+    provider = _CancelAfterFirstCallProvider()
+    service = TranslationService(provider, batch_size=1, max_retries=0, requests_per_second=0)
+    doc = _sample_document()
+    calls = {"n": 0}
+
+    def should_cancel() -> bool:
+        calls["n"] += 1
+        return calls["n"] > 2
+
+    out = service.translate_document(
+        doc,
+        source_lang="TH",
+        target_lang="EN",
+        should_cancel=should_cancel,
+    )
+    para = out.pages[0].blocks[0]
+    assert isinstance(para, ParagraphBlock)
+    assert para.runs[0].text.startswith("EN:")
+    assert para.runs[1].text == " โลก"
+
+
 def test_service_emits_progress_callback() -> None:
     provider = _MockProvider()
     service = TranslationService(provider, batch_size=2, max_retries=0, requests_per_second=0)

@@ -47,6 +47,7 @@ class TranslationService:
         source_lang: str,
         target_lang: str,
         progress_callback: Callable[[TranslationProgress], None] | None = None,
+        should_cancel: Callable[[], bool] | None = None,
     ) -> Document:
         segments = segment_document(document)
         if not segments:
@@ -65,11 +66,15 @@ class TranslationService:
         translated_chars = 0
 
         for chunk in _chunks(pending, self._batch_size):
+            if should_cancel is not None and should_cancel():
+                logger.warning("Translation cancelled before next batch.")
+                break
             done_segments, done_chars = self._translate_chunk(
                 chunk=chunk,
                 source_lang=source_lang,
                 target_lang=target_lang,
                 translated=translated,
+                should_cancel=should_cancel,
             )
             translated_segments += done_segments
             translated_chars += done_chars
@@ -99,12 +104,16 @@ class TranslationService:
         source_lang: str,
         target_lang: str,
         translated: dict[str, str],
+        should_cancel: Callable[[], bool] | None = None,
     ) -> tuple[int, int]:
         pending = list(chunk)
         attempt = 0
         newly_translated_segments = 0
         newly_translated_chars = 0
         while pending and attempt <= self._max_retries:
+            if should_cancel is not None and should_cancel():
+                logger.warning("Translation cancelled during batch retries.")
+                break
             attempt += 1
             self._throttle()
             ids = [seg_id for seg_id, _ in pending]

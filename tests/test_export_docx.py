@@ -61,6 +61,7 @@ def test_docx_contains_table_structure_and_cell_text(tmp_path: Path) -> None:
     assert "<w:tbl>" in xml
     assert "<w:t>A1</w:t>" in xml
     assert "<w:t>B2</w:t>" in xml
+    assert 'w:val="TableGrid"' in xml
 
 
 def test_docx_page_break_written_between_pages(tmp_path: Path) -> None:
@@ -74,7 +75,7 @@ def test_docx_page_break_written_between_pages(tmp_path: Path) -> None:
     DocxExporter(include_page_breaks=True).export(doc, out)
     xml = _doc_xml(out)
 
-    assert '<w:br w:type="page"/>' in xml
+    assert xml.count("<w:sectPr") >= 2
     assert "<w:t>Page1</w:t>" in xml
     assert "<w:t>Page2</w:t>" in xml
 
@@ -93,3 +94,23 @@ def test_font_mapping_fallback_defaults_to_calibri(tmp_path: Path) -> None:
     xml = _doc_xml(out)
 
     assert 'w:ascii="Calibri"' in xml
+
+
+def test_landscape_orientation_written_for_landscape_page(tmp_path: Path) -> None:
+    doc = Document(
+        pages=[
+            Page(
+                page_number=1,
+                width_pt=792.0,
+                height_pt=612.0,
+                blocks=[ParagraphBlock(runs=[Run(text="Landscape")])],
+            )
+        ]
+    )
+    out = tmp_path / "landscape.docx"
+    DocxExporter().export(doc, out)
+    xml = _doc_xml(out)
+
+    assert 'w:orient="landscape"' in xml
+    assert 'w:w="15840"' in xml
+    assert 'w:h="12240"' in xml

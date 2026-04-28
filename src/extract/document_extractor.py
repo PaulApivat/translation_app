@@ -96,7 +96,12 @@ class DocumentExtractor:
 
         ordered = sort_reading_order(items)
         blocks: list[Block] = [it.payload for it in ordered]
-        return Page(page_number=page_number, blocks=blocks)
+        return Page(
+            page_number=page_number,
+            width_pt=float(fitz_page.rect.width),
+            height_pt=float(fitz_page.rect.height),
+            blocks=blocks,
+        )
 
     def _overlaps_any_table(self, bbox: BBox, table_bboxes: list[BBox]) -> bool:
         for t in table_bboxes:

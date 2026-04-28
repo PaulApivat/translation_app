@@ -24,6 +24,21 @@ ruff check .
 ruff format --check .
 ```
 
+## Run desktop app (Phase 5)
+
+```bash
+.venv/bin/python -m ui
+```
+
+The UI includes:
+- input PDF picker
+- output DOCX picker
+- fixed TH -> EN mode (v1)
+- Translate/Cancel controls
+- progress bar + log panel
+- Settings dialog for `DEEPL_API_KEY` (saved in `.env`)
+- optional `Also export PDF` toggle (DOCX is always generated first)
+
 ## Verify extraction on your own PDF
 
 Phase 2 exposes a small CLI that turns a PDF into IR JSON (layout only, no translation yet). Use any path on disk; nothing is uploaded to a server.
@@ -90,6 +105,14 @@ You should see fewer/no Thai matches in translated segments, and English text in
 
 Open `translated_output.docx` in Word/Pages to visually verify formatting and
 print it if needed.
+
+7. Optional DOCX -> PDF conversion (Phase 5.1):
+
+If using UI, enable `Also export PDF`.
+
+CLI/manual option (same converter backend used by UI):
+- `docx2pdf` preferred (requires Microsoft Word on macOS)
+- LibreOffice (`soffice`) fallback if available
 
 ## API Key Setup
 
