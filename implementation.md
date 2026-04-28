@@ -14,9 +14,9 @@ Legend: `TODO` = not started, `IN_PROGRESS` = actively building, `DONE` = comple
 
 - `DONE` `bootstrap-repo` - Create standalone repo, pyproject, src/tests scaffold, and baseline README.
 - `DONE` `define-ir` - Implement IR dataclasses with stable IDs and JSON debug serialization.
-- `TODO` `build-extractors` - Implement PyMuPDF text/style extraction, column ordering, and pdfplumber table extraction.
-- `TODO` `translation-layer` - Implement provider adapter, chunking, batching/retries, and merge-by-ID.
-- `TODO` `docx-export` - Build DOCX writer for paragraphs/runs/tables with font mapping fallbacks.
+- `DONE` `build-extractors` - Implement PyMuPDF text/style extraction, column ordering, and pdfplumber table extraction.
+- `DONE` `translation-layer` - Implement provider adapter, chunking, batching/retries, and merge-by-ID.
+- `DONE` `docx-export` - Build DOCX writer for paragraphs/runs/tables with font mapping fallbacks.
 - `TODO` `desktop-ui` - Implement PySide6 UI with background worker, progress, logs, and settings.
 - `TODO` `tests-fixtures` - Add fixture PDFs and regression tests for ordering, tables, and DOCX structure.
 - `TODO` `package-release` - Package macOS app and finalize README with limitations and setup.
