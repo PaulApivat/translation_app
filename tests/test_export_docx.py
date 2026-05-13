@@ -4,6 +4,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from export import DocxExporter
+from export.docx_writer import THAI_TARGET_BODY_FONT, resolve_docx_body_font
 from ir import Cell, Document, Page, ParagraphBlock, Run, TableBlock
 
 
@@ -64,6 +65,21 @@ def test_docx_contains_table_structure_and_cell_text(tmp_path: Path) -> None:
     assert 'w:val="TableGrid"' in xml
 
 
+def test_docx_thai_target_default_font_profile(tmp_path: Path) -> None:
+    doc = Document(
+        pages=[
+            Page(
+                page_number=1,
+                blocks=[ParagraphBlock(runs=[Run(text="Hello", font_name="UnknownFontXYZ")])],
+            )
+        ]
+    )
+    out = tmp_path / "th.docx"
+    DocxExporter(default_font=THAI_TARGET_BODY_FONT).export(doc, out)
+    xml = _doc_xml(out)
+    assert "TH Sarabun New" in xml
+
+
 def test_docx_page_break_written_between_pages(tmp_path: Path) -> None:
     doc = Document(
         pages=[
@@ -114,3 +130,9 @@ def test_landscape_orientation_written_for_landscape_page(tmp_path: Path) -> Non
     assert 'w:orient="landscape"' in xml
     assert 'w:w="15840"' in xml
     assert 'w:h="12240"' in xml
+
+
+def test_resolve_docx_body_font_thai_target_and_override() -> None:
+    assert resolve_docx_body_font("EN", "TH") == "TH Sarabun New"
+    assert resolve_docx_body_font("TH", "EN") == "Calibri"
+    assert resolve_docx_body_font("EN", "TH", user_override="Angsana New") == "Angsana New"

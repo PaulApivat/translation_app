@@ -20,6 +20,7 @@ def _block_to_dict(block: Block) -> dict[str, Any]:
 
 def document_to_dict(document: Document) -> dict[str, Any]:
     return {
+        "layout_warnings": list(document.layout_warnings),
         "pages": [
             {
                 "page_number": page.page_number,
@@ -73,6 +74,7 @@ def _block_from_dict(data: dict[str, Any]) -> Block:
 
 def document_from_dict(data: dict[str, Any]) -> Document:
     return Document(
+        layout_warnings=list(data.get("layout_warnings", [])),
         pages=[
             Page(
                 page_number=page_data["page_number"],

@@ -9,7 +9,7 @@ import urllib.parse
 import urllib.request
 
 from .base import RateLimitError, TranslationError, TranslationProvider, TranslationRequest
-from .env_loader import load_dotenv
+from .env_loader import load_first_dotenv, read_deepl_api_key_from_files
 
 DEEPL_FREE_URL = "https://api-free.deepl.com/v2/translate"
 DEEPL_PRO_URL = "https://api.deepl.com/v2/translate"
@@ -25,10 +25,16 @@ class DeepLProvider(TranslationProvider):
         use_pro: bool = False,
         timeout_s: float = 30.0,
     ) -> None:
-        load_dotenv()
-        self._api_key = api_key or os.getenv("DEEPL_API_KEY")
+        load_first_dotenv()
+        self._api_key = api_key or os.getenv("DEEPL_API_KEY") or read_deepl_api_key_from_files()
         if not self._api_key:
-            raise TranslationError("DeepL API key is missing (set DEEPL_API_KEY).")
+            raise TranslationError(
+                "DeepL API key is missing. Set DEEPL_API_KEY in the environment, "
+                "or put it in a .env file: project folder when running from source; "
+                "when using the packaged app, place .env next to TranslationApp.app, "
+                "inside the .app bundle, beside the executable, or save via Settings "
+                "(macOS: ~/Library/Application Support/translation-app/.env)."
+            )
         self._url = DEEPL_PRO_URL if use_pro else DEEPL_FREE_URL
         self._timeout_s = timeout_s
 

@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+.pyinstaller-cache/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -38,6 +39,7 @@ MANIFEST
 #   before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+!translation_app.spec
 
 # Installer logs
 pip-log.txt

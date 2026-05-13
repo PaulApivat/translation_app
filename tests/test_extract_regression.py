@@ -11,6 +11,7 @@ from ir import ParagraphBlock, TableBlock
 from tests.fixtures.pdf_factory import (
     write_newspaper_order_pdf,
     write_single_column_pdf,
+    write_table_near_page_bottom,
     write_text_and_table_pdf,
     write_two_column_pdf,
 )
@@ -57,6 +58,17 @@ def test_two_column_newspaper_order(tmp_pdf: Path) -> None:
     assert idx_left_top < idx_left_bottom < idx_right_top
 
 
+def test_single_column_override_merges_columns_by_geometry(tmp_pdf: Path) -> None:
+    write_two_column_pdf(tmp_pdf)
+    doc_two = extract_document(str(tmp_pdf))
+    doc_one = extract_document(str(tmp_pdf), page_column_modes={1: "single"})
+    t_two = _paragraph_texts_in_order(doc_two.pages[0].blocks)
+    t_one = _paragraph_texts_in_order(doc_one.pages[0].blocks)
+    assert t_two != t_one
+    assert t_two.index("LeftBottom") < t_two.index("RightTop")
+    assert t_one.index("RightTop") < t_one.index("LeftMid")
+
+
 def test_newspaper_column_primary_order(tmp_pdf: Path) -> None:
     write_newspaper_order_pdf(tmp_pdf)
     doc = extract_document(str(tmp_pdf))
@@ -92,3 +104,10 @@ def test_mixed_text_and_table(tmp_pdf: Path) -> None:
     table_i = next(i for i, b in enumerate(blocks) if isinstance(b, TableBlock))
     outro_i = _para_idx("Below")
     assert intro_i < table_i < outro_i
+
+
+def test_layout_notice_table_near_page_bottom(tmp_pdf: Path) -> None:
+    write_table_near_page_bottom(tmp_pdf)
+    doc = extract_document(str(tmp_pdf))
+    assert doc.layout_warnings
+    assert any("bottom" in w.lower() for w in doc.layout_warnings)

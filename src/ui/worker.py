@@ -26,6 +26,8 @@ class PipelineWorker(QObject):
         source_lang: str = "TH",
         target_lang: str = "EN",
         also_export_pdf: bool = False,
+        page_column_modes: dict[int, str] | None = None,
+        docx_default_font: str | None = None,
     ) -> None:
         super().__init__()
         self._input_pdf = input_pdf
@@ -33,6 +35,8 @@ class PipelineWorker(QObject):
         self._source_lang = source_lang
         self._target_lang = target_lang
         self._also_export_pdf = also_export_pdf
+        self._page_column_modes = page_column_modes
+        self._docx_default_font = docx_default_font
         self._cancel_requested = False
 
     @Slot()
@@ -40,13 +44,20 @@ class PipelineWorker(QObject):
         try:
             self.progress_changed.emit(1)
             self.log_message.emit("Starting extraction...")
-            document = extract_document(self._input_pdf)
+            document = extract_document(
+                self._input_pdf,
+                page_column_modes=self._page_column_modes,
+            )
             if self._is_cancelled():
                 return
             self.progress_changed.emit(20)
             self.log_message.emit(f"Extracted {len(document.pages)} page(s).")
+            for notice in document.layout_warnings:
+                self.log_message.emit(f"Layout notice: {notice}")
 
-            self.log_message.emit("Starting translation (TH -> EN)...")
+            self.log_message.emit(
+                f"Starting translation ({self._source_lang} -> {self._target_lang})..."
+            )
             provider = DeepLProvider()
             service = TranslationService(provider)
             document = service.translate_document(
@@ -62,7 +73,12 @@ class PipelineWorker(QObject):
             self.log_message.emit("Translation stage finished.")
 
             self.log_message.emit(f"Exporting DOCX: {self._output_docx}")
-            export_docx(document, self._output_docx, include_page_breaks=True)
+            export_docx(
+                document,
+                self._output_docx,
+                include_page_breaks=True,
+                default_font=self._docx_default_font,
+            )
             if self._is_cancelled():
                 return
             self.progress_changed.emit(92)

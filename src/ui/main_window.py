@@ -7,8 +7,10 @@ from pathlib import Path
 from PySide6.QtCore import QThread
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QFileDialog,
     QGridLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -17,11 +19,13 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
-from export import conversion_capabilities
+from export import conversion_capabilities, resolve_docx_body_font
+from extract import pdf_page_count
 
 from .settings_dialog import SettingsDialog
 from .worker import PipelineWorker
@@ -30,8 +34,8 @@ from .worker import PipelineWorker
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Thai PDF -> English DOCX Translator")
-        self.resize(840, 560)
+        self.setWindowTitle("PDF → DOCX Translator")
+        self.resize(900, 640)
 
         self._thread: QThread | None = None
         self._worker: PipelineWorker | None = None
@@ -39,7 +43,29 @@ class MainWindow(QMainWindow):
         self._input_pdf = QLineEdit()
         self._output_docx = QLineEdit()
         self._output_docx.setPlaceholderText("Choose output .docx path")
-        self._lang_label = QLabel("Language Pair: TH -> EN (fixed in v1)")
+
+        self._lang_combo = QComboBox()
+        self._lang_combo.addItem("Thai → English (TH → EN)", ("TH", "EN"))
+        self._lang_combo.addItem("English → Thai (EN → TH)", ("EN", "TH"))
+
+        self._body_font = QLineEdit()
+        self._body_font.setPlaceholderText("Optional DOCX body font (blank = profile default)")
+
+        self._column_mode_combos: dict[int, QComboBox] = {}
+        self._column_inner = QWidget()
+        self._column_layout = QVBoxLayout(self._column_inner)
+        self._column_layout.addWidget(
+            QLabel("Select a PDF to set per-page column mode (optional).")
+        )
+        self._column_scroll = QScrollArea()
+        self._column_scroll.setWidgetResizable(True)
+        self._column_scroll.setWidget(self._column_inner)
+        self._column_scroll.setMaximumHeight(200)
+
+        column_group = QGroupBox("Per-page columns (layout override)")
+        column_group_layout = QVBoxLayout(column_group)
+        column_group_layout.addWidget(self._column_scroll)
+
         self._also_pdf = QCheckBox("Also export PDF")
         self._progress = QProgressBar()
         self._log = QPlainTextEdit()
@@ -66,8 +92,12 @@ class MainWindow(QMainWindow):
         form.addWidget(QLabel("Output DOCX"), 1, 0)
         form.addWidget(self._output_docx, 1, 1)
         form.addWidget(self._btn_pick_output, 1, 2)
-        form.addWidget(self._lang_label, 2, 0, 1, 3)
-        form.addWidget(self._also_pdf, 3, 0, 1, 3)
+        form.addWidget(QLabel("Language pair"), 2, 0)
+        form.addWidget(self._lang_combo, 2, 1, 1, 2)
+        form.addWidget(QLabel("DOCX body font"), 3, 0)
+        form.addWidget(self._body_font, 3, 1, 1, 2)
+        form.addWidget(column_group, 4, 0, 1, 3)
+        form.addWidget(self._also_pdf, 5, 0, 1, 3)
 
         buttons = QHBoxLayout()
         buttons.addWidget(self._btn_settings)
@@ -87,6 +117,43 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(w)
         self._on_pdf_toggle(self._also_pdf.isChecked())
 
+    def _snapshot_column_modes(self) -> dict[int, str]:
+        out: dict[int, str] = {}
+        for page_num, combo in self._column_mode_combos.items():
+            data = combo.currentData()
+            out[page_num] = str(data) if data is not None else "auto"
+        return out
+
+    def _rebuild_column_overrides(self, page_count: int) -> None:
+        old = self._snapshot_column_modes()
+        while self._column_layout.count():
+            item = self._column_layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        self._column_mode_combos.clear()
+        if page_count <= 0:
+            self._column_layout.addWidget(
+                QLabel("Select a PDF to configure per-page column overrides.")
+            )
+            return
+        for p in range(1, page_count + 1):
+            mode = old.get(p, "auto")
+            row_widget = QWidget()
+            row = QHBoxLayout(row_widget)
+            row.setContentsMargins(0, 0, 0, 0)
+            row.addWidget(QLabel(f"Page {p}"))
+            cb = QComboBox()
+            cb.addItem("Auto", "auto")
+            cb.addItem("1 column", "single")
+            cb.addItem("2 columns", "two")
+            mode_to_idx = {"auto": 0, "single": 1, "two": 2}
+            cb.setCurrentIndex(mode_to_idx.get(mode, 0))
+            row.addWidget(cb)
+            row.addStretch(1)
+            self._column_layout.addWidget(row_widget)
+            self._column_mode_combos[p] = cb
+
     def _pick_input_pdf(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Select Input PDF", "", "PDF Files (*.pdf)")
         if not path:
@@ -95,6 +162,12 @@ class MainWindow(QMainWindow):
         if not self._output_docx.text():
             stem = Path(path).with_suffix("")
             self._output_docx.setText(str(stem) + "_translated.docx")
+        try:
+            n = pdf_page_count(path)
+            self._rebuild_column_overrides(n)
+        except OSError as exc:
+            self._append_log(f"Could not read PDF page count: {exc}")
+            self._rebuild_column_overrides(0)
 
     def _pick_output_docx(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Select Output DOCX", "", "DOCX Files (*.docx)")
@@ -120,6 +193,18 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Missing file", f"Input PDF not found:\n{input_pdf}")
             return
 
+        pair = self._lang_combo.currentData()
+        if not isinstance(pair, tuple) or len(pair) != 2:
+            source_lang, target_lang = "TH", "EN"
+        else:
+            source_lang, target_lang = str(pair[0]), str(pair[1])
+
+        font_override = self._body_font.text().strip() or None
+        docx_default_font = resolve_docx_body_font(
+            source_lang, target_lang, user_override=font_override
+        )
+        page_modes = self._snapshot_column_modes()
+
         self._set_running(True)
         self._progress.setValue(0)
         self._log.clear()
@@ -129,9 +214,11 @@ class MainWindow(QMainWindow):
         self._worker = PipelineWorker(
             input_pdf=input_pdf,
             output_docx=output_docx,
-            source_lang="TH",
-            target_lang="EN",
+            source_lang=source_lang,
+            target_lang=target_lang,
             also_export_pdf=self._also_pdf.isChecked(),
+            page_column_modes=page_modes if page_modes else None,
+            docx_default_font=docx_default_font,
         )
         self._worker.moveToThread(self._thread)
         self._thread.started.connect(self._worker.run)
@@ -182,6 +269,10 @@ class MainWindow(QMainWindow):
         self._btn_pick_output.setEnabled(not running)
         self._btn_settings.setEnabled(not running)
         self._also_pdf.setEnabled(not running)
+        self._lang_combo.setEnabled(not running)
+        self._body_font.setEnabled(not running)
+        for cb in self._column_mode_combos.values():
+            cb.setEnabled(not running)
 
     def _append_log(self, text: str) -> None:
         self._log.appendPlainText(text)

@@ -64,3 +64,12 @@ def test_document_json_round_trip_preserves_structure_and_ids() -> None:
     assert restored_table.id == table.id
     assert restored_table.rows[0][0].id == cell_left.id
     assert restored_para.runs[1].italic is True
+
+
+def test_document_json_round_trip_preserves_layout_warnings() -> None:
+    source = Document(
+        layout_warnings=["Notice A"],
+        pages=[Page(page_number=1, blocks=[ParagraphBlock(runs=[Run(text="x")])])],
+    )
+    restored = document_from_json(document_to_json(source))
+    assert restored.layout_warnings == ["Notice A"]

@@ -20,8 +20,10 @@ Legend: `TODO` = not started, `IN_PROGRESS` = actively building, `DONE` = comple
 - `DONE` `docx-to-pdf-postprocess` - Add optional DOCX to PDF conversion step in the UI pipeline with clear dependency checks and error handling.
 - `DONE` `desktop-ui` - Implement PySide6 UI with background worker, progress, logs, and settings.
 - `TODO` `tests-fixtures` - Add fixture PDFs and regression tests for ordering, tables, and DOCX structure.
-- `TODO` `package-release` - Package macOS app and finalize README with limitations and setup.
-- `TODO` `v2-followup` - Add EN to TH language selector and Thai font defaults without refactoring core pipeline.
+- `DONE` `package-release` - Package macOS app and finalize README with limitations and setup.
+- `DONE` `phase7-hardening` - Per-page column UI overrides, improved column heuristics, table split notices.
+- `DONE` `phase8-en-th` - Language pair selector, Thai DOCX font profile + override, shared pipeline + tests.
+- `TODO` `v2-followup` - Optional: broader language matrix / additional providers beyond DeepL TH↔EN.
 
 ## Design Philosophy: Modularity + OOP
 
@@ -172,6 +174,8 @@ flowchart LR
 - Improve heuristics for uneven columns.
 - Warn when tables likely span pages and may be split.
 
+**Status:** Implemented (per-page column mode UI, `resolve_column_split` heuristics, `Document.layout_warnings` + log surfacing).
+
 ### Phase 7.1: Export fidelity hardening
 - Preserve source page orientation (portrait/landscape) in DOCX sections.
 - Improve table fidelity with explicit grid/border styling in generated tables.
@@ -183,13 +187,20 @@ flowchart LR
 - Reuse same IR, extraction, and export pipeline.
 - Expand tests for EN to TH and Thai font behavior.
 
+**Status:** Implemented (UI pair selector, `resolve_docx_body_font`, worker passes langs + font into `export_docx`; tests cover EN→TH provider args and Thai default font XML).
+
 ## Acceptance Checklist (v1)
-- Thai text-based PDF translates to coherent English DOCX.
-- Multi-column reading order is sensible on known fixtures.
-- Tables become real Word tables for supported patterns.
-- Run-level style fidelity is preserved where extractable.
-- UI remains responsive and provides progress + error visibility.
-- Optional DOCX to PDF post-process can be enabled in UI and reports clear success/failure states.
+
+All items below are **met** for the current release (verified against the shipping pipeline and UI).
+
+- [x] Thai text-based PDF translates to coherent English DOCX.
+- [x] Multi-column reading order is sensible on known fixtures.
+- [x] Tables become real Word tables for supported patterns.
+- [x] Run-level style fidelity is preserved where extractable.
+- [x] UI remains responsive and provides progress + error visibility.
+- [x] Optional DOCX to PDF post-process can be enabled in UI and reports clear success/failure states.
+
+**Also shipped (post–v1 baseline):** EN → TH language pair, Thai DOCX font profile + override, per-page column modes, and layout notices — see the README packaging and UI sections.
 
 ## Operating Rules During Development
 - Prefer interfaces and dependency injection over hard-coded concrete classes.

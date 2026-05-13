@@ -20,16 +20,33 @@ class FontMapRule:
 
 
 DEFAULT_FONT = "Calibri"
+THAI_TARGET_BODY_FONT = "TH Sarabun New"
 
 DEFAULT_FONT_RULES = (
     FontMapRule("thsarabun", "TH Sarabun New"),
     FontMapRule("angsana", "Angsana New"),
     FontMapRule("leelawadee", "Leelawadee UI"),
+    FontMapRule("cordia", "Cordia New"),
+    FontMapRule("browallia", "Browallia New"),
     FontMapRule("times", "Times New Roman"),
     FontMapRule("helvetica", "Arial"),
     FontMapRule("arial", "Arial"),
     FontMapRule("courier", "Courier New"),
 )
+
+
+def resolve_docx_body_font(
+    _source_lang: str,
+    target_lang: str,
+    *,
+    user_override: str | None = None,
+) -> str:
+    """Pick a Word body font for runs without a PDF font mapping (shared TH↔EN pipeline)."""
+    if user_override and user_override.strip():
+        return user_override.strip()
+    if target_lang.strip().upper() == "TH":
+        return THAI_TARGET_BODY_FONT
+    return DEFAULT_FONT
 
 
 class DocxExporter:
@@ -118,5 +135,9 @@ def export_docx(
     output_path: str | Path,
     *,
     include_page_breaks: bool = True,
+    default_font: str | None = None,
 ) -> None:
-    DocxExporter(include_page_breaks=include_page_breaks).export(document, output_path)
+    resolved = default_font if default_font is not None else DEFAULT_FONT
+    DocxExporter(include_page_breaks=include_page_breaks, default_font=resolved).export(
+        document, output_path
+    )

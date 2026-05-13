@@ -29,3 +29,29 @@ jobs:
 
       - name: Test
         run: pytest
+
+  package-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PYINSTALLER_CONFIG_DIR: ${{ github.workspace }}/.pyinstaller-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[packaging]"
+
+      - name: PyInstaller cache dir
+        run: mkdir -p "$PYINSTALLER_CONFIG_DIR"
+
+      - name: PyInstaller spec smoke build
+        run: |
+          python -m PyInstaller --noconfirm translation_app.spec
+          test -d dist/TranslationApp

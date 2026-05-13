@@ -78,3 +78,36 @@ def write_text_and_table_pdf(path: Path) -> None:
     page.insert_text((72, y0 + rows * cell_h + 40), "Below table outro")
     doc.save(str(path))
     doc.close()
+
+
+def write_table_near_page_bottom(path: Path) -> None:
+    """Grid table with bbox bottom flush to page (layout warning: possible page split)."""
+    doc = fitz.open()
+    page = doc.new_page(width=612, height=792)
+    x0, y0 = 72, 700
+    rows, cols = 2, 2
+    cell_w, cell_h = 100, 40
+    rect = fitz.Rect(x0, y0, x0 + cols * cell_w, y0 + rows * cell_h)
+    page.draw_rect(rect, color=(0, 0, 0), width=0.5)
+    for r in range(1, rows):
+        yy = y0 + r * cell_h
+        page.draw_line(
+            fitz.Point(x0, yy),
+            fitz.Point(x0 + cols * cell_w, yy),
+            color=(0, 0, 0),
+            width=0.5,
+        )
+    for c in range(1, cols):
+        xx = x0 + c * cell_w
+        page.draw_line(
+            fitz.Point(xx, y0),
+            fitz.Point(xx, y0 + rows * cell_h),
+            color=(0, 0, 0),
+            width=0.5,
+        )
+    page.insert_text((x0 + 6, y0 + 8), "X1")
+    page.insert_text((x0 + cell_w + 6, y0 + 8), "Y1")
+    page.insert_text((x0 + 6, y0 + cell_h + 8), "X2")
+    page.insert_text((x0 + cell_w + 6, y0 + cell_h + 8), "Y2")
+    doc.save(str(path))
+    doc.close()

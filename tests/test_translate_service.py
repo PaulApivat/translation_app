@@ -140,3 +140,25 @@ def test_service_emits_progress_callback() -> None:
     last = updates[-1]
     assert last.translated_segments == last.total_segments == 3
     assert last.translated_chars == last.total_chars
+
+
+@dataclass
+class _LangCaptureProvider:
+    last_request: TranslationRequest | None = None
+
+    def translate_batch(self, request: TranslationRequest) -> list[str | None]:
+        self.last_request = request
+        return list(request.texts)
+
+
+def test_service_passes_en_to_th_language_codes_to_provider() -> None:
+    provider = _LangCaptureProvider()
+    service = TranslationService(provider, batch_size=10, max_retries=0, requests_per_second=0)
+    para = ParagraphBlock(runs=[Run(text="Hello")])
+    doc = Document(pages=[Page(page_number=1, blocks=[para])])
+
+    service.translate_document(doc, source_lang="EN", target_lang="TH")
+
+    assert provider.last_request is not None
+    assert provider.last_request.source_lang.upper() == "EN"
+    assert provider.last_request.target_lang.upper() == "TH"

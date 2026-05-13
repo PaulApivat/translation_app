@@ -52,3 +52,5 @@ class Page:
 @dataclass(slots=True)
 class Document:
     pages: list[Page] = field(default_factory=list)
+    # Populated by extraction: layout heuristics notices (e.g. table page boundaries).
+    layout_warnings: list[str] = field(default_factory=list)
